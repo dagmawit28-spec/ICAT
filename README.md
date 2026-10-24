@@ -12,7 +12,7 @@ This is a free test build that runs in **Expo Go**. Apple Health, the home scree
 
 ## Easiest: home screen app (no installs)
 
-Live at **https://dagmawit28-spec.github.io/icat/**. Open it in Safari, tap Share, then **Add to Home Screen**. It gets the ICAT icon and opens full screen.
+Live at **https://dagmawit28-spec.github.io/ICAT/**. Open it in Safari, tap Share, then **Add to Home Screen**. It gets the ICAT icon and opens full screen.
 
 To publish changes: run `python3 scripts/build-web.py`, then push the `dist/` folder to the `gh-pages` branch.
 

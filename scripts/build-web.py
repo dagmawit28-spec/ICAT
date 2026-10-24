@@ -10,7 +10,7 @@ dist = root / "dist"
 shutil.rmtree(dist, ignore_errors=True)
 subprocess.run(["npx", "expo", "export", "--platform", "web"], cwd=root, check=True)
 
-base = "/icat"
+base = "/ICAT"
 shutil.copy(root / "assets/apple-touch-icon.png", dist / "apple-touch-icon.png")
 shutil.copy(root / "assets/icon.png", dist / "icon-1024.png")
 (dist / ".nojekyll").write_text("")
