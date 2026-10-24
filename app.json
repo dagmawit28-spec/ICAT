@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "icat-app",
-    "slug": "icat-app",
+    "name": "ICAT",
+    "slug": "icat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -19,6 +19,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "backgroundColor": "#E9EEF0"
   }
 }

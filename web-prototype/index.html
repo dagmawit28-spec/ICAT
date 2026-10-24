@@ -1,0 +1,561 @@
+<title>ICAT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one phone-width column, fixed bottom tab bar, tools open as full-screen sheets */
+:root{
+  --bg:#E9EEF0; --surface:#FFFFFF; --ink:#14212B; --muted:#5A6B77; --line:#D3DCE1;
+  --accent:#1E6B6A; --accent-ink:#FFFFFF; --accent-soft:#D5E9E7;
+  --charge:#E3A13A; --low:#D3604E; --good:#3E9A63;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F171C; --surface:#18232A; --ink:#E6EEF1; --muted:#93A5B0; --line:#2A3943;
+  --accent:#5FC1BC; --accent-ink:#0B1A1A; --accent-soft:#1D3836;
+  --charge:#F0B455; --low:#EE7D6B; --good:#64C48A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F171C; --surface:#18232A; --ink:#E6EEF1; --muted:#93A5B0; --line:#2A3943;
+  --accent:#5FC1BC; --accent-ink:#0B1A1A; --accent-soft:#1D3836;
+  --charge:#F0B455; --low:#EE7D6B; --good:#64C48A; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.7rem} h2{font-size:1.35rem} h3{font-size:1.05rem}
+p{margin:0}
+.wrap{max-width:520px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 120px;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:6px}
+.wordmark{font-family:var(--display);font-weight:700;font-size:1.5rem;letter-spacing:.02em}
+.wordmark small{display:block;font-family:var(--body);font-weight:400;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mini{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-variant-numeric:tabular-nums;font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.label{font-size:.74rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{border:0;border-radius:12px;padding:13px 18px;font-weight:700;background:var(--accent);color:var(--accent-ink);min-height:48px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.link{background:none;border:0;padding:4px 0;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:9px 14px;min-height:42px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+textarea,input[type=text]{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;resize:vertical}
+input[type=range]{width:100%;accent-color:var(--accent);height:32px}
+.scale{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+
+/* battery */
+.battery{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.cell{width:74px;height:128px;border:3px solid var(--ink);border-radius:12px;position:relative;padding:5px;display:flex;align-items:flex-end}
+.cell::before{content:"";position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:26px;height:7px;background:var(--ink);border-radius:3px 3px 0 0}
+.fill{width:100%;border-radius:6px;background:var(--charge);transition:height .6s ease}
+.pct{font-family:var(--display);font-size:2.6rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.inputs{display:grid;gap:14px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 4px;font-size:.85rem;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.factor{display:flex;flex-direction:column;gap:6px}
+.factor-head{display:flex;justify-content:space-between;gap:8px}
+
+/* steps */
+.dots{display:flex;gap:6px}
+.dots span{height:5px;flex:1;border-radius:3px;background:var(--line)}
+.dots span.on{background:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tool{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:14px;text-align:left;display:flex;flex-direction:column;gap:4px;min-height:112px}
+.tool b{font-family:var(--display);font-size:1.02rem}
+.tool .stage{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.note{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:.92rem}
+.warn{border-left:4px solid var(--low);padding-left:12px}
+.list{display:flex;flex-direction:column;gap:0}
+.entry{padding:12px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.entry:first-child{border-top:0}
+.shift{font-variant-numeric:tabular-nums;font-weight:700}
+.shift.up{color:var(--good)} .shift.down{color:var(--low)}
+
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav.tabs button{background:none;border:0;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.78rem;color:var(--muted);min-height:58px}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+
+/* sheet */
+.sheet{position:fixed;inset:0;z-index:20;background:var(--bg);overflow-y:auto}
+.sheet .wrap{padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:40px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.close{background:var(--surface);border:1px solid var(--line);border-radius:99px;width:44px;height:44px;font-size:1.3rem;line-height:1}
+.breath{width:220px;height:220px;margin:16px auto;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;position:relative}
+.breath .ball{position:absolute;inset:0;margin:auto;width:90px;height:90px;border-radius:50%;background:var(--accent);transition:transform 4s ease-in-out}
+.breath .txt{position:relative;font-family:var(--display);font-size:1.3rem;font-weight:700;color:var(--accent-ink)}
+.big{font-family:var(--display);font-size:2rem;font-weight:700;text-align:center;text-wrap:balance}
+.morning{display:flex;flex-direction:column;justify-content:center;min-height:100%;gap:22px}
+.morning .big{font-size:2.2rem;text-align:left}
+.foot{font-size:.82rem;color:var(--muted);text-align:center}
+.foot b{color:var(--ink)}
+@media (prefers-reduced-motion: reduce){.breath .ball,.fill{transition:none}}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="wordmark">ICAT<small>I can do all things</small></div>
+    <div class="mini" id="miniBat" aria-label="Mental battery"><span id="miniPct">--</span></div>
+  </header>
+  <main id="view"></main>
+  <p class="foot">ICAT is a test build, not therapy. In crisis in the US, call or text <b>988</b>. In danger, call <b>911</b>.</p>
+</div>
+
+<nav class="tabs" aria-label="Sections"><div class="in">
+  <button data-tab="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="17" rx="2"/><path d="M10 2h4"/><path d="M10 14h4"/></svg>Battery</button>
+  <button data-tab="checkin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>Check in</button>
+  <button data-tab="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5h6v2M3 12h18"/></svg>Toolbox</button>
+  <button data-tab="feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H9l-5 4z"/></svg>Feedback</button>
+</div></nav>
+
+<div class="sheet" id="sheet" hidden></div>
+
+<script>
+/* ---------- storage (per-device, private) ---------- */
+const KEY = "icat.v1";
+const today = () => new Date().toISOString().slice(0,10);
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
+let S = Object.assign({onboarded:false, morning:true, lastMorning:"", battery:{}, iam:[], checkins:[], toolsUsed:{}}, load());
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- mental battery (body budget) ---------- */
+const FACTORS = [
+  {k:"sleep", name:"Sleep", opts:["<5h","5–6h","7–8h","9h+"], val:[.15,.55,1,.85], w:.32, tip:"Short sleep makes everything feel louder."},
+  {k:"food", name:"Food", opts:["Nothing","Snacks","1 meal","2+ meals"], val:[.1,.4,.7,1], w:.24, tip:"An empty tank can feel like anxiety or irritation."},
+  {k:"water", name:"Water", opts:["Barely","Some","Plenty"], val:[.25,.65,1], w:.14, tip:"Dehydration shows up as fog and fatigue."},
+  {k:"move", name:"Movement", opts:["None","A little","Real workout"], val:[.35,.8,1], w:.12, tip:"Movement spends energy and refills it."},
+  {k:"people", name:"Connection", opts:["Isolated","Some","Good time with people"], val:[.3,.7,1], w:.18, tip:"Other people regulate us too."}
+];
+function battery(){
+  const b = S.battery.date === today() ? S.battery : {};
+  let sum = 0, wt = 0;
+  FACTORS.forEach(f => { if (b[f.k] != null){ sum += f.val[b[f.k]] * f.w; wt += f.w; } });
+  return wt ? Math.round(sum / wt * 100) : null;
+}
+function lowest(){
+  const b = S.battery.date === today() ? S.battery : {};
+  let low = null;
+  FACTORS.forEach(f => { if (b[f.k] != null && (!low || f.val[b[f.k]] < low.v)) low = {f, v:f.val[b[f.k]]}; });
+  return low && low.v < .7 ? low.f : null;
+}
+function batColor(p){ return p == null ? "var(--line)" : p < 40 ? "var(--low)" : p < 70 ? "var(--charge)" : "var(--good)"; }
+function renderMini(){
+  const p = battery();
+  $("#miniPct").textContent = p == null ? "Charge?" : p + "%";
+  $("#miniBat").style.color = p == null ? "var(--muted)" : batColor(p);
+}
+
+/* ---------- emotion words (constructed, user-named) ---------- */
+const WORDS = {
+  hu:["anxious","stressed","angry","frustrated","overwhelmed","scared","on edge","jealous"],
+  lu:["sad","drained","lonely","disappointed","numb","discouraged","ashamed","bored"],
+  hp:["excited","hyped","proud","motivated","locked in","happy","amped","inspired"],
+  lp:["calm","content","relieved","grateful","chill","peaceful","hopeful","rested"]
+};
+const SITUATIONS = ["School / work","Someone in my life","Game / performance","Rejection or setback","Money","My body / health","Nothing specific","Rather not say"];
+const SIGNALS = ["Heart racing","Tight chest","Stomach off","Tired","Restless","Hungry","Tense jaw/shoulders","Nothing I notice"];
+
+/* ---------- tools (Gross process model) ---------- */
+const TOOLS = [
+  {id:"shift", stage:"Change the situation", name:"Change something", desc:"Pick one small move for the next 10 minutes."},
+  {id:"ground", stage:"Shift attention", name:"5-4-3-2-1", desc:"Bring your attention back to the room."},
+  {id:"rethink", stage:"Rethink it", name:"Rethink it", desc:"Find another way to read what happened."},
+  {id:"breathe", stage:"Calm the body", name:"Long exhale", desc:"Breathe in 4, out 6. About a minute."},
+  {id:"iam", stage:"Self-talk", name:"I am…", desc:"Write a line you can come back to."}
+];
+
+/* ---------- views ---------- */
+let tab = "today";
+function go(t){ tab = t; document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === t ? "page" : "false")); render(); window.scrollTo(0,0); }
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => go(b.dataset.tab));
+
+function render(){
+  renderMini();
+  const v = $("#view");
+  if (!S.onboarded) return renderWelcome(v);
+  ({today:renderToday, checkin:renderCheckin, tools:renderTools, feedback:renderFeedback})[tab](v);
+}
+
+function renderWelcome(v){
+  $("nav.tabs").hidden = true;
+  v.innerHTML = `<div class="stack" style="gap:18px">
+    <h1>Feelings are made from more than the moment.</h1>
+    <p>How you slept, what you ate, who you've been around, and what's happening right now all shape how something feels. ICAT helps you notice that, name it in your own words, and pick a tool that fits.</p>
+    <div class="card">
+      <span class="label">How this works</span>
+      <div class="stack small">
+        <p><b>You're in charge.</b> Every question is optional. Skip anything.</p>
+        <p><b>Your body is a clue, not a verdict.</b> A racing heart shows up with excitement and with fear. You decide what it means.</p>
+        <p><b>Nothing you write leaves this phone</b>, unless you send feedback on the Feedback tab.</p>
+      </div>
+    </div>
+    <div class="card">
+      <label class="row" style="justify-content:space-between;flex-wrap:nowrap">
+        <span><b>Morning message</b><br><span class="small muted">A short positive screen the first time you open ICAT before noon.</span></span>
+        <input type="checkbox" id="mOpt" ${S.morning ? "checked" : ""} style="width:24px;height:24px;accent-color:var(--accent)">
+      </label>
+    </div>
+    <button class="btn wide" id="start">Start</button>
+  </div>`;
+  $("#start").onclick = () => { S.onboarded = true; S.morning = $("#mOpt").checked; S.lastMorning = today(); save(); $("nav.tabs").hidden = false; go("today"); };
+}
+
+function renderToday(v){
+  const p = battery(); const b = S.battery.date === today() ? S.battery : {};
+  const low = lowest();
+  const recent = S.checkins.slice(-4).reverse();
+  v.innerHTML = `<div class="stack" style="gap:18px">
+    <div class="card">
+      <div class="battery">
+        <div class="cell" aria-hidden="true"><div class="fill" style="height:${p ?? 0}%;background:${batColor(p)}"></div></div>
+        <div class="stack" style="gap:6px">
+          <span class="label">Mental battery · today</span>
+          <div class="pct">${p == null ? "—" : p + "%"}</div>
+          <p class="small muted">${p == null ? "Tap below to charge it up. Takes 15 seconds." : p < 40 ? "Running low. Feelings can hit harder today. That's your body budget talking, not a flaw in you." : p < 70 ? "Half charged. Good day to go easy on yourself." : "Well charged. You've got room to handle hard stuff."}</p>
+        </div>
+      </div>
+      ${low ? `<div class="note"><b>Lowest today: ${low.name.toLowerCase()}.</b> ${low.tip}</div>` : ""}
+    </div>
+    <div class="card">
+      <h3>What's fueling you today?</h3>
+      <div class="inputs">${FACTORS.map(f => `
+        <div class="factor"><div class="factor-head"><span>${f.name}</span></div>
+          <div class="seg ${f.opts.length === 3 ? "three" : ""}" role="group" aria-label="${f.name}">
+            ${f.opts.map((o,i) => `<button data-f="${f.k}" data-i="${i}" aria-pressed="${b[f.k] === i}">${o}</button>`).join("")}
+          </div></div>`).join("")}
+      </div>
+    </div>
+    <button class="btn wide" id="goCheck">Check in with how I feel</button>
+    ${recent.length ? `<div class="card"><span class="label">Recent check-ins</span><div class="list">${recent.map(entryHtml).join("")}</div></div>` : ""}
+  </div>`;
+  v.querySelectorAll(".seg button").forEach(btn => btn.onclick = () => {
+    if (S.battery.date !== today()) S.battery = {date: today()};
+    S.battery[btn.dataset.f] = +btn.dataset.i; save(); renderToday(v); renderMini();
+  });
+  $("#goCheck").onclick = () => go("checkin");
+}
+function entryHtml(c){
+  const d = new Date(c.at); const diff = c.after != null ? c.after - c.before : null;
+  return `<div class="entry"><div class="row" style="justify-content:space-between"><b>${esc(c.word || "Unnamed")}</b><span class="small muted">${d.toLocaleDateString([], {month:"short", day:"numeric"})} ${d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})}</span></div>
+    <span class="small muted">${esc(c.situation || "")}${c.tool ? " · used " + esc(TOOLS.find(t => t.id === c.tool)?.name) : ""}${diff != null ? ` · <span class="shift ${diff > 0 ? "up" : diff < 0 ? "down" : ""}">${diff > 0 ? "+" : ""}${diff} feel</span>` : ""}</span></div>`;
+}
+
+/* ---------- check-in flow ---------- */
+let C = null;
+function newCheck(){ C = {step:0, energy:50, feel:50, signals:[], situation:"", context:"", danger:"", word:"", tool:"", before:null, after:50}; }
+function renderCheckin(v){
+  if (!C) newCheck();
+  const N = 5;
+  const dots = `<div class="dots">${Array.from({length:N}, (_, i) => `<span class="${i <= C.step ? "on" : ""}"></span>`).join("")}</div>`;
+  const nav = (next = "Next", skip = true) => `<div class="row" style="justify-content:space-between">${C.step ? `<button class="btn ghost" id="back">Back</button>` : "<span></span>"}<div class="row">${skip ? `<button class="link" id="skip">Skip</button>` : ""}<button class="btn" id="next">${next}</button></div></div>`;
+  let h = "";
+  if (C.step === 0){
+    h = `<h2>What's your body doing?</h2>
+    <p class="muted small">No right answers. Just where you're at right now.</p>
+    <div class="card">
+      <div class="stack"><label for="en"><b>Energy</b></label><input type="range" id="en" min="0" max="100" value="${C.energy}"><div class="scale"><span>Low, heavy</span><span>Wired, activated</span></div></div>
+      <div class="stack"><label for="fe"><b>Feel</b></label><input type="range" id="fe" min="0" max="100" value="${C.feel}"><div class="scale"><span>Unpleasant</span><span>Pleasant</span></div></div>
+    </div>
+    <div class="stack"><span class="label">Signals you notice</span><div class="chips">${SIGNALS.map(s => `<button class="chip" data-sig="${s}" aria-pressed="${C.signals.includes(s)}">${s}</button>`).join("")}</div></div>
+    ${C.signals.some(s => ["Heart racing","Tight chest","Restless"].includes(s)) ? `<div class="note">That's high activation. It feels the same in your body whether you're scared, angry, or hyped. The situation decides which. That's next.</div>` : ""}
+    ${nav("Next", false)}`;
+  } else if (C.step === 1){
+    h = `<h2>What's going on around you?</h2>
+    <p class="muted small">Same body signal, different situation, different feeling.</p>
+    <div class="chips">${SITUATIONS.map(s => `<button class="chip" data-sit="${s}" aria-pressed="${C.situation === s}">${s}</button>`).join("")}</div>
+    <textarea id="ctx" rows="3" placeholder="Anything you want to add (optional, stays on your phone)">${esc(C.context)}</textarea>
+    <div class="card"><span><b>Are you in danger right now?</b></span>
+      <div class="chips">${["No","Not sure","Yes"].map(s => `<button class="chip" data-dg="${s}" aria-pressed="${C.danger === s}">${s}</button>`).join("")}</div>
+      ${C.danger === "Yes" ? `<div class="warn small"><b>Your safety comes first.</b> If you're in immediate danger, call 911. To talk to someone now, call or text 988 (US). Get somewhere safe, then come back if you want.</div>` : C.danger === "No" ? `<p class="small muted">Then your body's alarm might be louder than the actual threat. That's normal, and it's workable.</p>` : ""}
+    </div>
+    ${nav()}`;
+  } else if (C.step === 2){
+    const q = (C.energy >= 50 ? "h" : "l") + (C.feel >= 50 ? "p" : "u");
+    const others = Object.keys(WORDS).filter(k => k !== q);
+    h = `<h2>What would you call it?</h2>
+    <p class="muted small">Your word, not the app's. The more exact, the easier it is to handle.</p>
+    <div class="chips">${WORDS[q].map(w => `<button class="chip" data-w="${w}" aria-pressed="${C.word === w}">${w}</button>`).join("")}</div>
+    <details><summary class="small muted" style="cursor:pointer;padding:6px 0">Not quite? See more words</summary>
+      <div class="chips" style="margin-top:10px">${others.flatMap(k => WORDS[k]).map(w => `<button class="chip" data-w="${w}" aria-pressed="${C.word === w}">${w}</button>`).join("")}</div></details>
+    <input type="text" id="own" placeholder="Or type your own word" value="${WORDS.hu.concat(WORDS.lu, WORDS.hp, WORDS.lp).includes(C.word) ? "" : esc(C.word)}">
+    <button class="link" id="idk" style="align-self:flex-start">I honestly don't know, and that's fine</button>
+    ${nav()}`;
+  } else if (C.step === 3){
+    const p = battery(); const low = lowest();
+    h = `<h2>Pick a tool</h2>
+    ${p != null ? `<div class="note">Battery's at <b>${p}%</b>${low ? `, lowest on ${low.name.toLowerCase()}` : ""}. ${p < 50 ? "Part of this feeling may be your body running on empty. Worth fixing that too." : "You've got fuel to work with."}</div>` : `<div class="note">You haven't charged your battery today. Sleep, food and people all feed into this. You can fill it in after.</div>`}
+    <div class="grid2">${TOOLS.map(t => `<button class="tool" data-tool="${t.id}"><span class="stage">${t.stage}</span><b>${t.name}</b><span class="small muted">${t.desc}</span></button>`).join("")}</div>
+    <div class="row" style="justify-content:space-between"><button class="btn ghost" id="back">Back</button><button class="link" id="skip">I just wanted to name it</button></div>`;
+  } else {
+    h = `<h2>How does it feel now?</h2>
+    <p class="muted small">Even a small shift counts. No shift is useful info too.</p>
+    <div class="card"><div class="stack"><label for="af"><b>Feel</b></label><input type="range" id="af" min="0" max="100" value="${C.after}"><div class="scale"><span>Unpleasant</span><span>Pleasant</span></div></div></div>
+    <button class="btn wide" id="done">Save check-in</button>`;
+  }
+  v.innerHTML = `<div class="stack" style="gap:16px">${dots}${h}</div>`;
+
+  const nextStep = () => { C.step++; renderCheckin(v); window.scrollTo(0,0); };
+  $("#back") && ($("#back").onclick = () => { C.step--; renderCheckin(v); });
+  $("#next") && ($("#next").onclick = () => { if (C.step === 2 && $("#own").value.trim()) C.word = $("#own").value.trim(); if (C.step === 1) C.context = $("#ctx").value; nextStep(); });
+  $("#skip") && ($("#skip").onclick = () => { if (C.step === 3){ C.step = 4; C.after = C.feel; renderCheckin(v); } else nextStep(); });
+  if (C.step === 0){
+    $("#en").oninput = e => C.energy = +e.target.value;
+    $("#fe").oninput = e => { C.feel = +e.target.value; C.after = C.feel; };
+    v.querySelectorAll("[data-sig]").forEach(b => b.onclick = () => { const s = b.dataset.sig; C.signals = C.signals.includes(s) ? C.signals.filter(x => x !== s) : C.signals.concat(s); renderCheckin(v); });
+  }
+  if (C.step === 1){
+    $("#ctx").oninput = e => C.context = e.target.value;
+    v.querySelectorAll("[data-sit]").forEach(b => b.onclick = () => { C.situation = C.situation === b.dataset.sit ? "" : b.dataset.sit; renderCheckin(v); });
+    v.querySelectorAll("[data-dg]").forEach(b => b.onclick = () => { C.danger = b.dataset.dg; renderCheckin(v); });
+  }
+  if (C.step === 2){
+    v.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { C.word = b.dataset.w; renderCheckin(v); });
+    $("#idk").onclick = () => { C.word = "not sure yet"; nextStep(); };
+  }
+  if (C.step === 3){
+    v.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => { C.tool = b.dataset.tool; openTool(C.tool, () => { C.step = 4; renderCheckin(v); }); });
+  }
+  if (C.step === 4){
+    $("#af").oninput = e => C.after = +e.target.value;
+    $("#done").onclick = () => {
+      S.checkins.push({at:Date.now(), word:C.word, situation:C.situation, energy:C.energy, before:C.feel, after:C.after, tool:C.tool, signals:C.signals});
+      S.checkins = S.checkins.slice(-200); save();
+      const diff = C.after - C.feel; newCheck();
+      v.innerHTML = `<div class="stack" style="gap:16px;padding-top:20px"><div class="big">Saved.</div><p style="text-align:center">${diff > 0 ? `You moved <b>+${diff}</b> toward pleasant. That's regulation working.` : "You noticed it and named it. That's the skill."}</p><button class="btn wide" id="home">Back to battery</button></div>`;
+      $("#home").onclick = () => go("today");
+    };
+  }
+}
+
+/* ---------- toolbox tab ---------- */
+function renderTools(v){
+  v.innerHTML = `<div class="stack" style="gap:16px">
+    <h2>Toolbox</h2>
+    <p class="muted small">Five ways to regulate, from changing where you are to changing how you read it. Use any of them, any time.</p>
+    <div class="grid2">${TOOLS.map(t => `<button class="tool" data-tool="${t.id}"><span class="stage">${t.stage}</span><b>${t.name}</b><span class="small muted">${t.desc}</span></button>`).join("")}</div>
+    ${S.iam.length ? `<div class="card"><span class="label">Your I am lines</span><div class="list">${S.iam.map((l, i) => `<div class="entry row" style="justify-content:space-between;flex-wrap:nowrap"><span>${esc(l)}</span><button class="link" data-del="${i}" aria-label="Remove">Remove</button></div>`).join("")}</div></div>` : ""}
+    <div class="card"><label class="row" style="justify-content:space-between;flex-wrap:nowrap"><span><b>Morning message</b><br><span class="small muted">First open before noon.</span></span><input type="checkbox" id="mOpt2" ${S.morning ? "checked" : ""} style="width:24px;height:24px;accent-color:var(--accent)"></label>
+      <button class="link" id="preview" style="align-self:flex-start">Preview it</button></div>
+  </div>`;
+  v.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => openTool(b.dataset.tool, () => renderTools(v)));
+  v.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.iam.splice(+b.dataset.del, 1); save(); renderTools(v); });
+  $("#mOpt2").onchange = e => { S.morning = e.target.checked; save(); };
+  $("#preview").onclick = showMorning;
+}
+
+/* ---------- tool sheets ---------- */
+let timers = [];
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+function openTool(id, onDone){
+  const t = TOOLS.find(x => x.id === id);
+  S.toolsUsed[id] = (S.toolsUsed[id] || 0) + 1; save();
+  const sh = $("#sheet"); sh.hidden = false; document.body.style.overflow = "hidden";
+  const finish = () => { clearTimers(); sh.hidden = true; sh.innerHTML = ""; document.body.style.overflow = ""; onDone && onDone(); };
+  const shell = inner => { sh.innerHTML = `<div class="wrap"><div class="sheet-head"><div><span class="label">${t.stage}</span><h2>${t.name}</h2></div><button class="close" id="x" aria-label="Close">×</button></div>${inner}</div>`; $("#x").onclick = finish; sh.scrollTop = 0; };
+  ({breathe, ground, rethink, shift, iam})[id](shell, finish);
+}
+
+function breathe(shell, finish){
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let round = 0; const total = 6;
+  shell(`<p class="muted">In through your nose for 4. Out slow for 6. A longer exhale tells your body it's safe to slow down.</p>
+    <div class="breath"><div class="ball" id="ball"></div><div class="txt" id="bt">Ready</div></div>
+    <p class="big" style="font-size:1.1rem" id="rc">${total} breaths</p>
+    <button class="btn wide" id="go">Start</button>`);
+  $("#go").onclick = () => { $("#go").hidden = true; cycle(); };
+  function cycle(){
+    if (round >= total){ $("#bt").textContent = "Done"; $("#rc").textContent = "Nice. Notice anything different?"; const b = document.createElement("button"); b.className = "btn wide"; b.textContent = "Finish"; b.onclick = finish; $("#rc").after(b); return; }
+    round++; $("#rc").textContent = `Breath ${round} of ${total}`;
+    $("#bt").textContent = "In"; const ball = $("#ball");
+    ball.style.transitionDuration = reduce ? "0s" : "4s"; ball.style.transform = "scale(2.3)";
+    timers.push(setTimeout(() => { if (!$("#ball")) return; $("#bt").textContent = "Out"; ball.style.transitionDuration = reduce ? "0s" : "6s"; ball.style.transform = "scale(1)"; timers.push(setTimeout(cycle, 6000)); }, 4000));
+  }
+}
+
+function ground(shell, finish){
+  const steps = [[5,"things you can see"],[4,"things you can feel touching you"],[3,"things you can hear"],[2,"things you can smell"],[1,"slow breath"]];
+  let i = 0;
+  const draw = () => {
+    const [n, what] = steps[i];
+    shell(`<p class="muted">Pulls your attention out of your head and into the room. Say them in your head or out loud.</p>
+      <div class="card" style="align-items:center;padding:32px 18px"><div class="pct" style="font-size:4rem">${n}</div><p class="big" style="font-size:1.3rem">${what}</p></div>
+      <div class="dots">${steps.map((_, j) => `<span class="${j <= i ? "on" : ""}"></span>`).join("")}</div>
+      <button class="btn wide" id="nx">${i < steps.length - 1 ? "Got them" : "Finish"}</button>`);
+    $("#nx").onclick = () => { if (i < steps.length - 1){ i++; draw(); } else finish(); };
+  };
+  draw();
+}
+
+function rethink(shell, finish){
+  const prompts = [
+    ["What happened, just the facts?", "e.g. I didn't get the job I applied for."],
+    ["What's the story your brain is telling about it?", "e.g. I'm not good enough. I'll never get hired."],
+    ["What else could it mean?", "e.g. They had 300 applicants. One no isn't a pattern."],
+    ["What would you tell a friend in this spot?", "e.g. Their loss. Keep sending them out."],
+    ["Is there anything useful in this?", "e.g. Now I know to tailor my resume more."]
+  ];
+  let i = 0; const ans = [];
+  const draw = () => {
+    shell(`<p class="muted">Same situation, different reading, different feeling. This is called reappraisal, and it's one of the best-studied regulation skills there is.</p>
+      <div class="dots">${prompts.map((_, j) => `<span class="${j <= i ? "on" : ""}"></span>`).join("")}</div>
+      <h3>${prompts[i][0]}</h3>
+      <textarea id="ra" rows="4" placeholder="${prompts[i][1]}">${esc(ans[i] || "")}</textarea>
+      <div class="row" style="justify-content:space-between">${i ? `<button class="btn ghost" id="bk">Back</button>` : "<span></span>"}<button class="btn" id="nx">${i < prompts.length - 1 ? "Next" : "See my new take"}</button></div>`);
+    $("#bk") && ($("#bk").onclick = () => { ans[i] = $("#ra").value; i--; draw(); });
+    $("#nx").onclick = () => { ans[i] = $("#ra").value; if (i < prompts.length - 1){ i++; draw(); } else summary(); };
+  };
+  const summary = () => {
+    const take = [ans[2], ans[3], ans[4]].filter(x => x && x.trim()).map(esc).join("<br><br>");
+    shell(`<span class="label">Your new take</span><div class="card"><p>${take || "You worked through it. Sometimes just slowing the story down is enough."}</p></div>
+      <p class="small muted">Write it as an "I am" line to keep it?</p>
+      <input type="text" id="il" placeholder="e.g. I am someone who keeps going.">
+      <div class="row"><button class="btn" id="sv">Save line & finish</button><button class="btn ghost" id="fn">Finish</button></div>`);
+    $("#sv").onclick = () => { const l = $("#il").value.trim(); if (l){ S.iam.push(l); save(); } finish(); };
+    $("#fn").onclick = finish;
+  };
+  draw();
+}
+
+function shift(shell, finish){
+  const moves = ["Step outside for 5 minutes","Move to a different room","Text someone I trust","Eat something or drink water","Do one tiny piece of it, not all of it","Put it down until a set time","Ask for help with it","Leave the situation for now"];
+  let pick = [];
+  const draw = () => {
+    shell(`<p class="muted">Sometimes the fastest way to change a feeling is to change where you are or what's in front of you.</p>
+      <h3>What's one thing you can change in the next 10 minutes?</h3>
+      <div class="chips">${moves.map(m => `<button class="chip" data-m="${m}" aria-pressed="${pick.includes(m)}">${m}</button>`).join("")}</div>
+      ${pick.length ? `<div class="note">Plan: <b>${pick.map(esc).join(", ").toLowerCase()}</b>. Go do it, then come back.</div>` : ""}
+      <button class="btn wide" id="fn" ${pick.length ? "" : "disabled"}>I'll do it</button>`);
+    sheetQ("[data-m]").forEach(b => b.onclick = () => { const m = b.dataset.m; pick = pick.includes(m) ? pick.filter(x => x !== m) : pick.concat(m); draw(); });
+    $("#fn").onclick = finish;
+  };
+  draw();
+}
+
+function iam(shell, finish){
+  const starters = ["I am capable of hard things.","I am allowed to take up space.","I am more than one bad day.","I am getting better at this.","I am enough as I am right now.","I am someone who keeps going."];
+  shell(`<p class="muted">Short, present tense, believable. Pick one or write your own. These show up in your morning message.</p>
+    <div class="chips">${starters.map(s => `<button class="chip" data-s="${s}">${s}</button>`).join("")}</div>
+    <input type="text" id="il" placeholder="I am…" value="I am ">
+    <button class="btn wide" id="sv">Save</button>`);
+  sheetQ("[data-s]").forEach(b => b.onclick = () => { $("#il").value = b.dataset.s; });
+  $("#sv").onclick = () => { const l = $("#il").value.trim(); if (l && l !== "I am"){ S.iam.push(l); save(); } finish(); };
+}
+function sheetQ(s){ return $("#sheet").querySelectorAll(s); }
+
+/* ---------- morning message ---------- */
+const MORNING = ["New day, fresh battery. Charge it up before the world asks for it.","You don't have to feel ready to start.","Whatever yesterday was, today's a different situation.","Feelings are information, not instructions.","Eat, hydrate, move a little. Your mood is listening."];
+function showMorning(){
+  const sh = $("#sheet"); sh.hidden = false;
+  const line = S.iam.length ? S.iam[Math.floor(Math.random() * S.iam.length)] : "I am capable of hard things.";
+  const msg = MORNING[new Date().getDate() % MORNING.length];
+  sh.innerHTML = `<div class="wrap morning"><span class="label">Good morning</span><p class="big">${esc(line)}</p><p>${msg}</p><button class="btn wide" id="mgo">Start my day</button><p class="small muted">You can turn this off in the Toolbox.</p></div>`;
+  $("#mgo").onclick = () => { sh.hidden = true; sh.innerHTML = ""; go("today"); };
+}
+
+/* ---------- feedback (goes to Dag) ---------- */
+let db = null, user = null, isOwner = false, canWrite = null;
+const Q = [
+  {k:"helpful", q:"Did it actually help you feel better or think clearer?"},
+  {k:"easy", q:"How easy was it to use?"},
+  {k:"again", q:"Would you open it again on your own?"}
+];
+let F = {helpful:0, easy:0, again:0, best:"", cut:"", missing:"", other:""};
+function stats(){ return {checkins:S.checkins.length, tools:Object.assign({}, S.toolsUsed), iamLines:S.iam.length, batteryToday:battery()}; }
+function fbText(){ return `ICAT feedback\nHelped: ${F.helpful}/5\nEasy: ${F.easy}/5\nUse again: ${F.again}/5\nBest part: ${F.best}\nCut/ass: ${F.cut}\nMissing: ${F.missing}\nOther: ${F.other}\nCheck-ins done: ${S.checkins.length}`; }
+
+function renderFeedback(v){
+  v.innerHTML = `<div class="stack" style="gap:16px">
+    <h2>Be honest. Is it ass?</h2>
+    <p class="muted small">Dag reads every one of these. Rough answers are more useful than nice ones.</p>
+    ${Q.map(q => `<div class="card" style="gap:10px"><b>${q.q}</b><div class="seg" style="grid-template-columns:repeat(5,1fr)" role="group" aria-label="${q.q}">${[1,2,3,4,5].map(n => `<button data-q="${q.k}" data-n="${n}" aria-pressed="${F[q.k] === n}">${n}</button>`).join("")}</div><div class="scale"><span>Nope</span><span>Yes, a lot</span></div></div>`).join("")}
+    <div class="stack"><label for="f1"><b>Best part?</b></label><textarea id="f1" rows="2">${esc(F.best)}</textarea></div>
+    <div class="stack"><label for="f2"><b>What's ass / what should be cut?</b></label><textarea id="f2" rows="2">${esc(F.cut)}</textarea></div>
+    <div class="stack"><label for="f3"><b>What's missing?</b></label><textarea id="f3" rows="2">${esc(F.missing)}</textarea></div>
+    <div class="stack"><label for="f4"><b>Anything else</b></label><textarea id="f4" rows="2">${esc(F.other)}</textarea></div>
+    <p class="small muted">Sending shares your answers plus counts (how many check-ins, which tools you opened). Never what you wrote in a check-in or tool.</p>
+    <button class="btn wide" id="send">Send to Dag</button>
+    <div id="fbStatus"></div>
+    <div id="owner"></div>
+  </div>`;
+  v.querySelectorAll("[data-q]").forEach(b => b.onclick = () => { F[b.dataset.q] = +b.dataset.n; v.querySelectorAll(`[data-q="${b.dataset.q}"]`).forEach(x => x.setAttribute("aria-pressed", x === b)); });
+  [["f1","best"],["f2","cut"],["f3","missing"],["f4","other"]].forEach(([id, k]) => $("#" + id).oninput = e => F[k] = e.target.value);
+  $("#send").onclick = sendFeedback;
+  if (isOwner) renderOwner();
+}
+function fallback(msg){
+  const st = $("#fbStatus");
+  st.innerHTML = `<div class="card"><p class="small">${msg} Copy this and text it to Dag instead:</p><textarea id="fbCopy" rows="7" readonly>${esc(fbText())}</textarea><button class="btn ghost" id="cp">Copy</button></div>`;
+  $("#cp").onclick = async () => { try{ await navigator.clipboard.writeText(fbText()); $("#cp").textContent = "Copied"; }catch(e){ $("#fbCopy").select(); } };
+}
+async function sendFeedback(){
+  if (!F.helpful && !F.best && !F.cut && !F.missing && !F.other){ $("#fbStatus").innerHTML = `<p class="small" style="color:var(--low)">Answer at least one question first.</p>`; return; }
+  const btn = $("#send"); btn.disabled = true; btn.textContent = "Sending…";
+  try{
+    if (!db || !user) throw "nodb";
+    const id = await user.id(); if (!id) throw "nodb";
+    const ref = db.doc("feedback/" + id);
+    const snap = await ref.get();
+    const prev = snap.exists ? (snap.data().entries || []) : [];
+    const entry = Object.assign({at:new Date().toISOString()}, F, {stats:stats()});
+    await ref.set({uid:id, entries:prev.concat(entry).slice(-20), updatedAt:entry.at});
+    $("#fbStatus").innerHTML = `<div class="note"><b>Sent. Thank you.</b> Keep using it and send more anytime.</div>`;
+    F = {helpful:0, easy:0, again:0, best:"", cut:"", missing:"", other:""};
+    btn.textContent = "Sent";
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Send to Dag";
+    fallback(e === "nodb" ? "Couldn't send from here (you may need to be signed in to Claude)." : "That didn't go through.");
+  }
+}
+async function renderOwner(){
+  const box = $("#owner"); if (!box || !db) return;
+  box.innerHTML = `<div class="card"><span class="label">Tester feedback · only you see this</span><div id="ownList" class="list"><p class="small muted">Loading…</p></div></div>`;
+  try{
+    const qs = await db.collection("feedback").get();
+    const ids = qs.docs.map(d => d.id);
+    const ps = ids.length ? await user.profiles(ids) : {};
+    const rows = qs.docs.flatMap(d => (d.data().entries || []).map(e => ({who: (ps[d.id] && ps[d.id].name) || "Tester", e})))
+      .sort((a, b) => b.e.at.localeCompare(a.e.at));
+    $("#ownList").innerHTML = rows.length ? rows.map(({who, e}) => `<div class="entry"><div class="row" style="justify-content:space-between"><b>${esc(who)}</b><span class="small muted">${new Date(e.at).toLocaleDateString([], {month:"short", day:"numeric"})}</span></div>
+      <span class="small">Helped ${e.helpful || "–"}/5 · Easy ${e.easy || "–"}/5 · Again ${e.again || "–"}/5 · ${e.stats?.checkins ?? 0} check-ins</span>
+      ${e.best ? `<span class="small"><b>Best:</b> ${esc(e.best)}</span>` : ""}${e.cut ? `<span class="small"><b>Cut:</b> ${esc(e.cut)}</span>` : ""}${e.missing ? `<span class="small"><b>Missing:</b> ${esc(e.missing)}</span>` : ""}${e.other ? `<span class="small"><b>Other:</b> ${esc(e.other)}</span>` : ""}</div>`).join("")
+      : `<p class="small muted">No feedback yet. Share the link with your testers and their answers show up here.</p>`;
+  }catch(e){ $("#ownList").innerHTML = `<p class="small muted">Couldn't load feedback right now.</p>`; }
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  if (S.onboarded){
+    $("nav.tabs").hidden = false;
+    const h = new Date().getHours();
+    if (S.morning && S.lastMorning !== today() && h >= 4 && h < 12){ S.lastMorning = today(); save(); go("today"); showMorning(); return; }
+  }
+  go("today");
+}
+boot();
+(async () => {
+  try{
+    if (!window.claude || !window.claude.use) return;
+    [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    isOwner = user ? await user.isOwner() : false;
+    if (isOwner && tab === "feedback") renderOwner();
+  }catch(e){}
+})();
+</script>
