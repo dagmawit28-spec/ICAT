@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   View, Text, Pressable, ScrollView, TextInput, Modal, Animated, Easing,
-  Share, Switch, StyleSheet, AccessibilityInfo, PanResponder, Platform,
+  Share, Switch, StyleSheet, AccessibilityInfo, PanResponder, Platform, Linking,
 } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -63,7 +63,7 @@ const LOCKED = [
   { icon: "hand-left", name: "Phone break, only when you ask", desc: "Say you want off your phone and ICAT helps you stop. It never locks you out on its own." },
 ];
 const MORNING = ["New day, fresh battery. Charge it up before the world asks for it.", "You don't have to feel ready to start.", "Whatever yesterday was, today's a different situation.", "Feelings are information, not instructions.", "Eat, hydrate, move a little. Your mood is listening."];
-const DEFAULT = { onboarded: false, morning: true, lastMorning: "", battery: {}, iam: [], checkins: [], toolsUsed: {}, toolLog: [], reviewDays: [], feedbackSent: false, homeAck: false, testStart: "" };
+const DEFAULT = { calAdded: false, onboarded: false, morning: true, lastMorning: "", battery: {}, iam: [], checkins: [], toolsUsed: {}, toolLog: [], reviewDays: [], feedbackSent: false, homeAck: false, testStart: "" };
 
 /* ============ 3-day test plan ============ */
 const PLAN = [
@@ -135,6 +135,7 @@ function Main() {
   const [tool, setTool] = useState(null);
   const [morning, setMorning] = useState(false);
   const [review, setReview] = useState(false);
+  const [cal, setCal] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then((raw) => {
@@ -163,7 +164,8 @@ function Main() {
     setTool({ id, onDone });
   };
   const openReview = () => setReview(true);
-  const ctx = { S, update, openTool, setTab, setMorning, pct, hue, openReview };
+  const openCal = () => setCal(true);
+  const ctx = { S, update, openTool, setTab, setMorning, pct, hue, openReview, openCal };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -187,6 +189,9 @@ function Main() {
       </Modal>
       <Modal visible={morning} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setMorning(false)}>
         <MorningScreen S={S} hue={hue} onClose={() => { setMorning(false); update((st) => ({ ...st, lastMorning: today() })); }} />
+      </Modal>
+      <Modal visible={cal} animationType="slide" transparent onRequestClose={() => setCal(false)}>
+        <CalendarSheet S={S} onClose={() => setCal(false)} onAdded={() => update((st) => ({ ...st, calAdded: true }))} />
       </Modal>
       <Modal visible={review} animationType="slide" transparent onRequestClose={() => setReview(false)}>
         <ReviewSheet S={S} onClose={() => setReview(false)} onSent={() => update((st) => ({ ...st, reviewDays: [...st.reviewDays, today()] }))} />
@@ -398,6 +403,46 @@ async function sendText(message) {
 }
 const SEND_MSG = { sent: "Sent. Thank you.", copied: "Copied. Paste it in a text to Dag.", fail: "Couldn't open sharing. Screenshot this and send it to Dag.", cancel: "" };
 
+/* Calendar reminders: Apple (.ics hosted with the app) or Google (recurring template link) */
+const APP_URL = "https://dagmawit28-spec.github.io/ICAT/";
+function CalendarSheet({ S, onClose, onAdded }) {
+  const insets = useSafeAreaInsets();
+  const start = S.testStart || today();
+  const ymd = start.replace(/-/g, "");
+  const g = (title, hr, details) => "https://calendar.google.com/calendar/render?action=TEMPLATE"
+    + `&text=${encodeURIComponent(title)}&dates=${ymd}T${hr}0000/${ymd}T${hr}1000`
+    + `&details=${encodeURIComponent(details + " " + APP_URL)}&recur=${encodeURIComponent("RRULE:FREQ=DAILY;COUNT=3")}`;
+  const open = (url) => { tap(); onAdded(); Linking.openURL(url).catch(() => {}); };
+  return (
+    <View style={s.sheetBack}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close" />
+      <View style={[s.sheetCard, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={s.grabber} />
+        <View style={s.rowBetween}>
+          <Text style={s.hero2}>Add reminders</Text>
+          <Pressable onPress={onClose} style={s.close} accessibilityLabel="Close"><Ionicons name="close" size={22} color={C.ink} /></Pressable>
+        </View>
+        <Text style={s.small}>Two nudges a day for your 3 days, starting {new Date(start + "T12:00").toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })}.</Text>
+        <Glass style={{ gap: 10, padding: 14 }}>
+          {[["sunny", "9:00 AM", "Today's tasks (charge battery, check in)"], ["moon", "8:00 PM", "Rate the day / send feedback on day 3"]].map(([ic, t, d]) => (
+            <View key={t} style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+              <Ionicons name={ic} size={18} color={C.amber} />
+              <Text style={[s.h3, { width: 74 }]}>{t}</Text>
+              <Text style={[s.small, { flex: 1 }]}>{d}</Text>
+            </View>
+          ))}
+        </Glass>
+        <Btn label="Apple Calendar" icon="logo-apple" onPress={() => open(`${APP_URL}cal/${start}.ics`)} />
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Btn ghost style={{ flex: 1 }} label="Google 9 AM" icon="logo-google" onPress={() => open(g("ICAT: today's tasks", "09", "Open ICAT and do today's checklist. Charge your battery first."))} />
+          <Btn ghost style={{ flex: 1 }} label="Google 8 PM" icon="logo-google" onPress={() => open(g("ICAT: rate the day", "20", "Tap the star (Review) in ICAT. On day 3, send your full feedback instead."))} />
+        </View>
+        <Text style={s.tiny}>Apple: tap "Add All" when your calendar opens. Google: tap both buttons and save each one.</Text>
+      </View>
+    </View>
+  );
+}
+
 /* Quick review: stars + one line */
 function ReviewSheet({ S, onClose, onSent }) {
   const insets = useSafeAreaInsets();
@@ -464,7 +509,7 @@ function TabBar({ tab, setTab }) {
 const PAGE_BOTTOM = 130;
 
 /* ============ welcome ============ */
-function Welcome({ update }) {
+function Welcome({ update, openCal }) {
   const [step, setStep] = useState(0);
   const [m, setM] = useState(true);
   return (
@@ -500,6 +545,7 @@ function Welcome({ update }) {
               ))}
             </Glass>
           ))}
+          <Btn ghost label="Add reminders to my calendar" icon="calendar" onPress={openCal} />
           <Text style={s.small}>Miss a day? No stress. Pick up where you left off.</Text>
           <Btn label="I'm in" icon="arrow-forward" onPress={() => setStep(2)} />
         </FadeIn>
@@ -543,7 +589,7 @@ function LockedRow({ f }) {
 }
 
 /* ============ battery (home) ============ */
-function PlanCard({ S, update, setTab, openTool, openReview }) {
+function PlanCard({ S, update, setTab, openTool, openReview, openCal }) {
   const day = testDay(S);
   if (day > 3) {
     return (
@@ -583,12 +629,13 @@ function PlanCard({ S, update, setTab, openTool, openReview }) {
           {!t.done && t.go !== "battery" && t.go !== "home" && <Ionicons name="chevron-forward" size={16} color={C.faint} />}
         </Pressable>
       ))}
+      {!S.calAdded && <Btn ghost label="Add reminders to my calendar" icon="calendar" onPress={openCal} />}
       {done === tasks.length && <Note icon="checkmark-done">{day < 3 ? "Day done. See you tomorrow." : "That's the whole test. Thank you for real."}</Note>}
     </Glass>
   );
 }
 
-function Today({ S, update, setTab, pct, hue, openTool, openReview }) {
+function Today({ S, update, setTab, pct, hue, openTool, openReview, openCal }) {
   const low = lowestFactor(S);
   const b = S.battery.date === today() ? S.battery : {};
   const recent = S.checkins.slice(-4).reverse();
@@ -614,7 +661,7 @@ function Today({ S, update, setTab, pct, hue, openTool, openReview }) {
         </Text>
       </FadeIn>
       {low && <FadeIn delay={80}><Note hue={hue} icon="flash"><Text style={{ fontFamily: F.bold }}>Lowest: {low.name.toLowerCase()}. </Text>{low.tip}</Note></FadeIn>}
-      <FadeIn delay={100}><PlanCard S={S} update={update} setTab={setTab} openTool={openTool} openReview={openReview} /></FadeIn>
+      <FadeIn delay={100}><PlanCard S={S} update={update} setTab={setTab} openTool={openTool} openReview={openReview} openCal={openCal} /></FadeIn>
 
       <FadeIn delay={120}>
         <Glass style={{ gap: 16 }}>

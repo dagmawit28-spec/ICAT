@@ -36,4 +36,33 @@ head_extra = f"""
 """
 html = html.replace("</head>", head_extra + "</head>", 1)
 (dist / "index.html").write_text(html)
+
+# ---- calendar reminders: one .ics per possible test start date ----
+# Times are "floating" (no timezone) so they land at 9am / 8pm wherever the tester is.
+import datetime
+APP_URL = "https://dagmawit28-spec.github.io/ICAT/"
+EVENTS = [
+    (0, 9, "ICAT Day 1: get set up", "Add ICAT to your home screen, charge your battery, do one full check-in with a tool, and write an I am line."),
+    (0, 20, "ICAT: rate day 1", "Open ICAT and tap the star (Review) at the top. 10 seconds."),
+    (1, 9, "ICAT Day 2: charge your battery", "Charge your battery, then check in the moment something hits you today. Try a tool you haven't used."),
+    (1, 20, "ICAT: rate day 2", "Open ICAT and tap the star (Review) at the top."),
+    (2, 9, "ICAT Day 3: habit test", "Charge your battery, do a check-in, and use Rethink it on something that bugged you."),
+    (2, 20, "ICAT: send your full feedback", "Feedback tab in ICAT. Be brutal, this is the part Dag needs most."),
+]
+def esc(t): return t.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;")
+cal = dist / "cal"; cal.mkdir()
+stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+start0 = datetime.date.today() - datetime.timedelta(days=7)
+for n in range(160):
+    d0 = start0 + datetime.timedelta(days=n)
+    lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ICAT//Test plan//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:ICAT test"]
+    for i, (off, hr, title, desc) in enumerate(EVENTS):
+        d = d0 + datetime.timedelta(days=off)
+        st = datetime.datetime(d.year, d.month, d.day, hr, 0)
+        lines += ["BEGIN:VEVENT", f"UID:icat-{d0.isoformat()}-{i}@icat", f"DTSTAMP:{stamp}",
+                  f"DTSTART:{st.strftime('%Y%m%dT%H%M%S')}", f"DTEND:{(st + datetime.timedelta(minutes=10)).strftime('%Y%m%dT%H%M%S')}",
+                  f"SUMMARY:{esc(title)}", f"DESCRIPTION:{esc(desc + ' ' + APP_URL)}", f"URL:{APP_URL}",
+                  "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{esc(title)}", "TRIGGER:PT0M", "END:VALARM", "END:VEVENT"]
+    lines.append("END:VCALENDAR")
+    (cal / f"{d0.isoformat()}.ics").write_text("\r\n".join(lines) + "\r\n")
 print("Built dist/ for", base)

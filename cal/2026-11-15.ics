@@ -1,0 +1,91 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ICAT//Test plan//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:ICAT test
+BEGIN:VEVENT
+UID:icat-2026-11-15-0@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261115T090000
+DTEND:20261115T091000
+SUMMARY:ICAT Day 1: get set up
+DESCRIPTION:Add ICAT to your home screen\, charge your battery\, do one full check-in with a tool\, and write an I am line. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT Day 1: get set up
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:icat-2026-11-15-1@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261115T200000
+DTEND:20261115T201000
+SUMMARY:ICAT: rate day 1
+DESCRIPTION:Open ICAT and tap the star (Review) at the top. 10 seconds. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT: rate day 1
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:icat-2026-11-15-2@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261116T090000
+DTEND:20261116T091000
+SUMMARY:ICAT Day 2: charge your battery
+DESCRIPTION:Charge your battery\, then check in the moment something hits you today. Try a tool you haven't used. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT Day 2: charge your battery
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:icat-2026-11-15-3@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261116T200000
+DTEND:20261116T201000
+SUMMARY:ICAT: rate day 2
+DESCRIPTION:Open ICAT and tap the star (Review) at the top. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT: rate day 2
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:icat-2026-11-15-4@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261117T090000
+DTEND:20261117T091000
+SUMMARY:ICAT Day 3: habit test
+DESCRIPTION:Charge your battery\, do a check-in\, and use Rethink it on something that bugged you. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT Day 3: habit test
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:icat-2026-11-15-5@icat
+DTSTAMP:20261024T203421Z
+DTSTART:20261117T200000
+DTEND:20261117T201000
+SUMMARY:ICAT: send your full feedback
+DESCRIPTION:Feedback tab in ICAT. Be brutal\, this is the part Dag needs most. https://dagmawit28-spec.github.io/ICAT/
+URL:https://dagmawit28-spec.github.io/ICAT/
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:ICAT: send your full feedback
+TRIGGER:PT0M
+END:VALARM
+END:VEVENT
+END:VCALENDAR
