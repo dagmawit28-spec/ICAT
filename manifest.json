@@ -1,0 +1,21 @@
+{
+  "name": "ICAT",
+  "short_name": "ICAT",
+  "start_url": "/ICAT/",
+  "scope": "/ICAT/",
+  "display": "standalone",
+  "background_color": "#090D12",
+  "theme_color": "#090D12",
+  "icons": [
+    {
+      "src": "/ICAT/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/ICAT/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}
