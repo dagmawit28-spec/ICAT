@@ -30,7 +30,8 @@ const thump = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catc
 
 /* ============ content ============ */
 const KEY = "icat.v1";
-const today = () => new Date().toISOString().slice(0, 10);
+const localDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = () => localDate(new Date());
 const FACTORS = [
   { k: "sleep", icon: "moon", name: "Sleep", opts: ["<5h", "5–6h", "7–8h", "9h+"], val: [0.15, 0.55, 1, 0.85], w: 0.32, tip: "Short sleep makes everything feel louder." },
   { k: "food", icon: "restaurant", name: "Food", opts: ["None", "Snacks", "1 meal", "2+"], val: [0.1, 0.4, 0.7, 1], w: 0.24, tip: "An empty tank can feel like anxiety or irritation." },
@@ -62,7 +63,47 @@ const LOCKED = [
   { icon: "hand-left", name: "Phone break, only when you ask", desc: "Say you want off your phone and ICAT helps you stop. It never locks you out on its own." },
 ];
 const MORNING = ["New day, fresh battery. Charge it up before the world asks for it.", "You don't have to feel ready to start.", "Whatever yesterday was, today's a different situation.", "Feelings are information, not instructions.", "Eat, hydrate, move a little. Your mood is listening."];
-const DEFAULT = { onboarded: false, morning: true, lastMorning: "", battery: {}, iam: [], checkins: [], toolsUsed: {} };
+const DEFAULT = { onboarded: false, morning: true, lastMorning: "", battery: {}, iam: [], checkins: [], toolsUsed: {}, toolLog: [], reviewDays: [], feedbackSent: false, homeAck: false, testStart: "" };
+
+/* ============ 3-day test plan ============ */
+const PLAN = [
+  { day: 1, title: "Get set up", why: "Learn how it works and get the basics down." },
+  { day: 2, title: "Use it in real life", why: "Catch a real moment, good or bad, while it's happening." },
+  { day: 3, title: "Habit test + feedback", why: "See if you reach for it on your own, then tell Dag the truth." },
+];
+const isStandalone = () => Platform.OS !== "web" || (typeof window !== "undefined" && (window.navigator.standalone || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)));
+function testDay(S) {
+  if (!S.testStart) return 1;
+  return Math.floor((new Date(today() + "T12:00") - new Date(S.testStart + "T12:00")) / 86400000) + 1;
+}
+function tasksFor(S, day) {
+  const t = today();
+  const b = S.battery.date === t ? S.battery : {};
+  const filled = FACTORS.filter((f) => b[f.k] != null).length;
+  const checks = S.checkins.filter((c) => localDate(new Date(c.at)) === t);
+  const toolsToday = S.toolLog.filter((x) => x.date === t).map((x) => x.id);
+  const toolsBefore = S.toolLog.filter((x) => x.date < t).map((x) => x.id);
+  const rated = S.reviewDays.includes(t);
+  if (day === 1) return [
+    { k: "home", label: "Add ICAT to your home screen", hint: "Safari → Share → Add to Home Screen. Tap here once it's done.", done: isStandalone() || S.homeAck, go: "home" },
+    { k: "bat", label: "Charge your battery (all 5)", hint: "Sleep, food, water, movement, connection.", done: filled === 5, go: "battery" },
+    { k: "chk", label: "Do one full check-in and use a tool", hint: "Go all the way through, even if you feel fine.", done: checks.some((c) => c.tool), go: "checkin" },
+    { k: "iam", label: "Write one I am line", hint: "It'll show up in tomorrow's morning message.", done: S.iam.length > 0, go: "iam" },
+    { k: "rate", label: "Rate day 1", hint: "Star button, top right. 10 seconds.", done: rated, go: "review" },
+  ];
+  if (day === 2) return [
+    { k: "bat", label: "Charge your battery in the morning", hint: "Before your day gets going.", done: filled === 5, go: "battery" },
+    { k: "chk", label: "Check in when something hits you", hint: "Stress, annoyance, hype, anything. Do it in the moment, not later.", done: checks.length > 0, go: "checkin" },
+    { k: "new", label: "Try a tool you haven't used yet", hint: "Toolbox tab.", done: toolsToday.some((id) => !toolsBefore.includes(id)), go: "tools" },
+    { k: "rate", label: "Rate day 2", hint: "Star button, top right.", done: rated, go: "review" },
+  ];
+  return [
+    { k: "bat", label: "Charge your battery", hint: "Did you open ICAT without being reminded? Tell Dag in your feedback.", done: filled === 5, go: "battery" },
+    { k: "chk", label: "Do at least one check-in", hint: "Whenever you notice a feeling.", done: checks.length > 0, go: "checkin" },
+    { k: "re", label: "Use Rethink it on something that bugged you", hint: "Anything from the last few days counts.", done: toolsToday.includes("rethink"), go: "rethink" },
+    { k: "fb", label: "Send your full feedback", hint: "Feedback tab. Be brutal. This is the part Dag needs most.", done: S.feedbackSent, go: "feedback" },
+  ];
+}
 
 function batteryPct(S) {
   const b = S.battery.date === today() ? S.battery : {};
@@ -101,6 +142,7 @@ function Main() {
       try { st = { ...DEFAULT, ...(JSON.parse(raw) || {}) }; } catch (e) {}
       const h = new Date().getHours();
       if (st.onboarded && st.morning && st.lastMorning !== today() && h >= 4 && h < 12) setMorning(true);
+      if (st.onboarded && !st.testStart) st.testStart = today();
       setS(st);
     }).catch(() => setS({ ...DEFAULT }));
   }, []);
@@ -117,7 +159,7 @@ function Main() {
   const pct = batteryPct(S);
   const hue = hueFor(pct);
   const openTool = (id, onDone) => {
-    update((st) => ({ ...st, toolsUsed: { ...st.toolsUsed, [id]: (st.toolsUsed[id] || 0) + 1 } }));
+    update((st) => ({ ...st, toolsUsed: { ...st.toolsUsed, [id]: (st.toolsUsed[id] || 0) + 1 }, toolLog: [...st.toolLog, { id, date: today() }].slice(-300) }));
     setTool({ id, onDone });
   };
   const openReview = () => setReview(true);
@@ -147,7 +189,7 @@ function Main() {
         <MorningScreen S={S} hue={hue} onClose={() => { setMorning(false); update((st) => ({ ...st, lastMorning: today() })); }} />
       </Modal>
       <Modal visible={review} animationType="slide" transparent onRequestClose={() => setReview(false)}>
-        <ReviewSheet S={S} onClose={() => setReview(false)} />
+        <ReviewSheet S={S} onClose={() => setReview(false)} onSent={() => update((st) => ({ ...st, reviewDays: [...st.reviewDays, today()] }))} />
       </Modal>
     </View>
   );
@@ -357,7 +399,7 @@ async function sendText(message) {
 const SEND_MSG = { sent: "Sent. Thank you.", copied: "Copied. Paste it in a text to Dag.", fail: "Couldn't open sharing. Screenshot this and send it to Dag.", cancel: "" };
 
 /* Quick review: stars + one line */
-function ReviewSheet({ S, onClose }) {
+function ReviewSheet({ S, onClose, onSent }) {
   const insets = useSafeAreaInsets();
   const [stars, setStars] = useState(0);
   const [why, setWhy] = useState("");
@@ -365,9 +407,11 @@ function ReviewSheet({ S, onClose }) {
   const [status, setStatus] = useState("");
   const labels = ["", "Ass", "Meh", "It's okay", "Good", "Love it"];
   const send = async () => {
-    const msg = [`ICAT review${name ? ` from ${name}` : ""}: ${"★".repeat(stars)}${"☆".repeat(5 - stars)} (${stars}/5)`, why ? `"${why}"` : "", `Check-ins so far: ${S.checkins.length}`].filter(Boolean).join("\n");
+    const day = Math.min(testDay(S), 3);
+    const msg = [`ICAT review, day ${day}${name ? `, from ${name}` : ""}: ${"★".repeat(stars)}${"☆".repeat(5 - stars)} (${stars}/5)`, why ? `"${why}"` : "", `Check-ins so far: ${S.checkins.length}`].filter(Boolean).join("\n");
     const r = await sendText(msg);
     setStatus(SEND_MSG[r]);
+    if (r === "sent" || r === "copied") onSent && onSent();
     if (r === "sent") { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setTimeout(onClose, 900); }
   };
   return (
@@ -437,6 +481,28 @@ function Welcome({ update }) {
           <Text style={s.small}>For now you'll tap in sleep, food and the rest yourself. When you give feedback, tell Dag which of these you'd actually want.</Text>
           <Btn label="Got it" icon="arrow-forward" onPress={() => setStep(1)} />
         </FadeIn>
+      ) : step === 1 ? (
+        <FadeIn key="p" style={{ gap: 18 }}>
+          <View style={s.badge}><Ionicons name="calendar" size={14} color={C.mint} /><Text style={[s.label, { color: C.mint }]}>Your 3-day test</Text></View>
+          <Text style={s.hero}>Here's what Dag needs from you.</Text>
+          <Text style={s.lead}>About 5 minutes a day for 3 days. The home screen shows each day's checklist and ticks things off as you do them.</Text>
+          {PLAN.map((p) => (
+            <Glass key={p.day} style={{ gap: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={s.dayNum}><Text style={s.dayNumText}>{p.day}</Text></View>
+                <View style={{ flex: 1 }}><Text style={s.h3}>Day {p.day} · {p.title}</Text><Text style={s.small}>{p.why}</Text></View>
+              </View>
+              {tasksFor({ ...DEFAULT, battery: {} }, p.day).map((t) => (
+                <View key={t.k} style={{ flexDirection: "row", gap: 10, paddingLeft: 4 }}>
+                  <Ionicons name="ellipse-outline" size={14} color={C.faint} style={{ marginTop: 4 }} />
+                  <Text style={[s.body, { flex: 1, fontSize: 14.5 }]}>{t.label}</Text>
+                </View>
+              ))}
+            </Glass>
+          ))}
+          <Text style={s.small}>Miss a day? No stress. Pick up where you left off.</Text>
+          <Btn label="I'm in" icon="arrow-forward" onPress={() => setStep(2)} />
+        </FadeIn>
       ) : (
         <FadeIn key="b" style={{ gap: 18 }}>
           <Text style={s.hero}>Feelings are made from more than the moment.</Text>
@@ -455,7 +521,7 @@ function Welcome({ update }) {
             <View style={{ flex: 1 }}><Text style={s.h3}>Morning message</Text><Text style={s.small}>A positive screen the first time you open ICAT before noon.</Text></View>
             <Switch value={m} onValueChange={setM} trackColor={{ true: C.mint, false: "#2A333D" }} thumbColor="#fff" />
           </Glass>
-          <Btn label="Let's go" icon="sparkles" onPress={() => update((st) => ({ ...st, onboarded: true, morning: m, lastMorning: today() }))} />
+          <Btn label="Let's go" icon="sparkles" onPress={() => update((st) => ({ ...st, onboarded: true, morning: m, lastMorning: today(), testStart: today() }))} />
           <Footer />
         </FadeIn>
       )}
@@ -477,7 +543,52 @@ function LockedRow({ f }) {
 }
 
 /* ============ battery (home) ============ */
-function Today({ S, update, setTab, pct, hue }) {
+function PlanCard({ S, update, setTab, openTool, openReview }) {
+  const day = testDay(S);
+  if (day > 3) {
+    return (
+      <Glass style={{ gap: 8, borderColor: "rgba(111,239,192,0.35)" }}>
+        <View style={s.badge}><Ionicons name="trophy" size={13} color={C.mint} /><Text style={[s.label, { color: C.mint }]}>Test complete</Text></View>
+        <Text style={s.h2}>You finished the 3-day test. Thank you.</Text>
+        <Text style={s.small}>{S.feedbackSent ? "Dag got your feedback. Keep using ICAT if it helps." : "One last thing: send your full feedback from the Feedback tab."}</Text>
+        {!S.feedbackSent && <Btn label="Send feedback" icon="chatbubble-ellipses" onPress={() => setTab("feedback")} />}
+      </Glass>
+    );
+  }
+  const plan = PLAN[day - 1];
+  const tasks = tasksFor(S, day);
+  const done = tasks.filter((t) => t.done).length;
+  const act = (t) => {
+    tap();
+    if (t.go === "home") update((st) => ({ ...st, homeAck: !st.homeAck }));
+    else if (t.go === "checkin" || t.go === "tools" || t.go === "feedback") setTab(t.go);
+    else if (t.go === "iam" || t.go === "rethink") openTool(t.go);
+    else if (t.go === "review") openReview();
+  };
+  return (
+    <Glass style={{ gap: 12 }}>
+      <View style={s.rowBetween}>
+        <View style={s.badge}><Ionicons name="calendar" size={13} color={C.mint} /><Text style={[s.label, { color: C.mint }]}>Day {day} of 3</Text></View>
+        <Text style={s.small}>{done}/{tasks.length} done</Text>
+      </View>
+      <Text style={s.h2}>{plan.title}</Text>
+      <View style={s.progress}><View style={[s.progressFill, { width: `${(done / tasks.length) * 100}%` }]} /></View>
+      {tasks.map((t) => (
+        <Pressable key={t.k} onPress={() => act(t)} style={s.task} accessibilityRole="button" accessibilityState={{ checked: t.done }}>
+          <Ionicons name={t.done ? "checkmark-circle" : "ellipse-outline"} size={22} color={t.done ? C.mint : C.faint} />
+          <View style={{ flex: 1 }}>
+            <Text style={[s.h3, t.done && { color: C.muted, textDecorationLine: "line-through" }]}>{t.label}</Text>
+            {!t.done && <Text style={s.small}>{t.hint}</Text>}
+          </View>
+          {!t.done && t.go !== "battery" && t.go !== "home" && <Ionicons name="chevron-forward" size={16} color={C.faint} />}
+        </Pressable>
+      ))}
+      {done === tasks.length && <Note icon="checkmark-done">{day < 3 ? "Day done. See you tomorrow." : "That's the whole test. Thank you for real."}</Note>}
+    </Glass>
+  );
+}
+
+function Today({ S, update, setTab, pct, hue, openTool, openReview }) {
   const low = lowestFactor(S);
   const b = S.battery.date === today() ? S.battery : {};
   const recent = S.checkins.slice(-4).reverse();
@@ -503,6 +614,7 @@ function Today({ S, update, setTab, pct, hue }) {
         </Text>
       </FadeIn>
       {low && <FadeIn delay={80}><Note hue={hue} icon="flash"><Text style={{ fontFamily: F.bold }}>Lowest: {low.name.toLowerCase()}. </Text>{low.tip}</Note></FadeIn>}
+      <FadeIn delay={100}><PlanCard S={S} update={update} setTab={setTab} openTool={openTool} openReview={openReview} /></FadeIn>
 
       <FadeIn delay={120}>
         <Glass style={{ gap: 16 }}>
@@ -928,7 +1040,7 @@ function MorningScreen({ S, hue, onClose }) {
 
 /* ============ feedback ============ */
 const EMPTY_F = { helpful: 0, easy: 0, again: 0, want: [], best: "", cut: "", missing: "", other: "", name: "" };
-function Feedback({ S }) {
+function Feedback({ S, update }) {
   const [fb, setFb] = useState(EMPTY_F);
   const [status, setStatus] = useState("");
   const set = (p) => setFb((f) => ({ ...f, ...p }));
@@ -945,6 +1057,7 @@ function Feedback({ S }) {
     if (!fb.helpful && !fb.best && !fb.cut && !fb.missing && !fb.other && !fb.want.length) { setStatus("Answer at least one question first."); return; }
     const r = await sendText(text());
     setStatus(SEND_MSG[r]);
+    if (r === "sent" || r === "copied") update((st) => ({ ...st, feedbackSent: true }));
     if (r === "sent") setFb(EMPTY_F);
   };
   return (
@@ -1035,6 +1148,11 @@ const s = StyleSheet.create({
   tabBtn: { flex: 1, alignItems: "center", gap: 3 },
   tabIcon: { width: 46, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   tabText: { fontFamily: F.semi, fontSize: 11, color: C.muted },
+  dayNum: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(111,239,192,0.14)" },
+  dayNumText: { fontFamily: F.display, color: C.mint, fontSize: 16 },
+  progress: { height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: C.mint },
+  task: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   sheetBack: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" },
   sheetCard: { backgroundColor: "#121A24", borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth: 1, borderColor: C.edge, paddingHorizontal: 20, paddingTop: 10, gap: 14 },
   grabber: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.18)", marginBottom: 4 },
