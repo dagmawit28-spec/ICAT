@@ -93,6 +93,7 @@ function Main() {
   const [tab, setTab] = useState("today");
   const [tool, setTool] = useState(null);
   const [morning, setMorning] = useState(false);
+  const [review, setReview] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(KEY).then((raw) => {
@@ -119,7 +120,8 @@ function Main() {
     update((st) => ({ ...st, toolsUsed: { ...st.toolsUsed, [id]: (st.toolsUsed[id] || 0) + 1 } }));
     setTool({ id, onDone });
   };
-  const ctx = { S, update, openTool, setTab, setMorning, pct, hue };
+  const openReview = () => setReview(true);
+  const ctx = { S, update, openTool, setTab, setMorning, pct, hue, openReview };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -127,7 +129,7 @@ function Main() {
       <SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
         {!S.onboarded ? <Welcome {...ctx} /> : (
           <>
-            <Header pct={pct} hue={hue} />
+            <Header pct={pct} hue={hue} onReview={openReview} />
             <View style={{ flex: 1 }}>
               {tab === "today" && <Today {...ctx} />}
               {tab === "checkin" && <CheckIn {...ctx} />}
@@ -143,6 +145,9 @@ function Main() {
       </Modal>
       <Modal visible={morning} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setMorning(false)}>
         <MorningScreen S={S} hue={hue} onClose={() => { setMorning(false); update((st) => ({ ...st, lastMorning: today() })); }} />
+      </Modal>
+      <Modal visible={review} animationType="slide" transparent onRequestClose={() => setReview(false)}>
+        <ReviewSheet S={S} onClose={() => setReview(false)} />
       </Modal>
     </View>
   );
@@ -318,16 +323,75 @@ function FeelBar({ value, onChange, setScroll }) {
 }
 
 /* ============ header + tab bar ============ */
-function Header({ pct, hue }) {
+function Header({ pct, hue, onReview }) {
   return (
     <View style={s.header}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <LinearGradient colors={[hue, C.cyan]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.logo}><Text style={s.logoText}>i</Text></LinearGradient>
         <Text style={s.wordmark}>ICAT</Text>
       </View>
-      <View style={s.pill}>
-        <View style={[s.pillDot, { backgroundColor: hue }]} />
-        <Text style={s.pillText}>{pct == null ? "Not charged" : `${pct}%`}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Pressable onPress={() => { tap(); onReview(); }} style={s.pill} accessibilityRole="button" accessibilityLabel="Review ICAT">
+          <Ionicons name="star" size={13} color={C.amber} />
+          <Text style={s.pillText}>Review</Text>
+        </Pressable>
+        <View style={s.pill}>
+          <View style={[s.pillDot, { backgroundColor: hue }]} />
+          <Text style={s.pillText}>{pct == null ? "—" : `${pct}%`}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/* Send text to Dag: share sheet, or copy on browsers without one */
+async function sendText(message) {
+  if (Platform.OS === "web") {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ text: message }); return "sent"; } catch (e) { if (e && e.name === "AbortError") return "cancel"; }
+    }
+    try { await navigator.clipboard.writeText(message); return "copied"; } catch (e) { return "fail"; }
+  }
+  try { const r = await Share.share({ message }); return r.action === Share.sharedAction ? "sent" : "cancel"; } catch (e) { return "fail"; }
+}
+const SEND_MSG = { sent: "Sent. Thank you.", copied: "Copied. Paste it in a text to Dag.", fail: "Couldn't open sharing. Screenshot this and send it to Dag.", cancel: "" };
+
+/* Quick review: stars + one line */
+function ReviewSheet({ S, onClose }) {
+  const insets = useSafeAreaInsets();
+  const [stars, setStars] = useState(0);
+  const [why, setWhy] = useState("");
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState("");
+  const labels = ["", "Ass", "Meh", "It's okay", "Good", "Love it"];
+  const send = async () => {
+    const msg = [`ICAT review${name ? ` from ${name}` : ""}: ${"★".repeat(stars)}${"☆".repeat(5 - stars)} (${stars}/5)`, why ? `"${why}"` : "", `Check-ins so far: ${S.checkins.length}`].filter(Boolean).join("\n");
+    const r = await sendText(msg);
+    setStatus(SEND_MSG[r]);
+    if (r === "sent") { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); setTimeout(onClose, 900); }
+  };
+  return (
+    <View style={s.sheetBack}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close review" />
+      <View style={[s.sheetCard, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <View style={s.grabber} />
+        <View style={s.rowBetween}>
+          <Text style={s.hero2}>Rate ICAT</Text>
+          <Pressable onPress={onClose} style={s.close} accessibilityLabel="Close"><Ionicons name="close" size={22} color={C.ink} /></Pressable>
+        </View>
+        <Text style={s.small}>Takes 10 seconds. Goes straight to Dag.</Text>
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 10, paddingVertical: 6 }}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Pressable key={n} hitSlop={6} onPress={() => { tap(); setStars(n); }} accessibilityLabel={`${n} star${n > 1 ? "s" : ""}`}>
+              <Ionicons name={n <= stars ? "star" : "star-outline"} size={42} color={n <= stars ? C.amber : C.faint} />
+            </Pressable>
+          ))}
+        </View>
+        <Text style={[s.h3, { textAlign: "center", minHeight: 21 }]}>{labels[stars]}</Text>
+        <TextInput style={s.input} value={why} onChangeText={setWhy} placeholder="One line on why" placeholderTextColor={C.faint} />
+        <TextInput style={s.input} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={C.faint} />
+        <Btn label="Send review" icon="paper-plane" disabled={!stars} onPress={send} />
+        {!!status && <Text style={[s.body, { textAlign: "center" }]}>{status}</Text>}
       </View>
     </View>
   );
@@ -492,7 +556,7 @@ function Entry({ c }) {
 
 /* ============ check-in ============ */
 const freshCheck = () => ({ step: 0, energy: 50, feel: 50, signals: [], situation: "", context: "", danger: "", word: "", own: "", tool: "", after: 50 });
-function CheckIn({ update, openTool, setTab, pct, S }) {
+function CheckIn({ update, openTool, setTab, pct, S, openReview }) {
   const [c, setC] = useState(freshCheck);
   const [saved, setSaved] = useState(null);
   const [scrollOn, setScrollOn] = useState(true);
@@ -510,6 +574,7 @@ function CheckIn({ update, openTool, setTab, pct, S }) {
           <Text style={[s.hero, { textAlign: "center" }]}>Saved.</Text>
           <Text style={[s.lead, { textAlign: "center" }]}>{saved > 0 ? `You moved +${saved} toward pleasant. That's regulation working.` : "You noticed it and named it. That's the skill."}</Text>
           <Btn label="Back to battery" onPress={() => { setSaved(null); setTab("today"); }} style={{ alignSelf: "stretch" }} />
+          <Btn ghost label="Rate ICAT" icon="star" onPress={openReview} style={{ alignSelf: "stretch" }} />
         </FadeIn>
       </View>
     );
@@ -878,10 +943,9 @@ function Feedback({ S }) {
   ].join("\n");
   const send = async () => {
     if (!fb.helpful && !fb.best && !fb.cut && !fb.missing && !fb.other && !fb.want.length) { setStatus("Answer at least one question first."); return; }
-    try {
-      const r = await Share.share({ message: text() });
-      if (r.action === Share.sharedAction) { setStatus("Sent. Thank you."); setFb(EMPTY_F); } else setStatus("");
-    } catch (e) { setStatus("Couldn't open sharing. Screenshot this page and send it to Dag."); }
+    const r = await sendText(text());
+    setStatus(SEND_MSG[r]);
+    if (r === "sent") setFb(EMPTY_F);
   };
   return (
     <ScrollView contentContainerStyle={[s.page, { paddingBottom: PAGE_BOTTOM }]} keyboardShouldPersistTaps="handled">
@@ -971,6 +1035,9 @@ const s = StyleSheet.create({
   tabBtn: { flex: 1, alignItems: "center", gap: 3 },
   tabIcon: { width: 46, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   tabText: { fontFamily: F.semi, fontSize: 11, color: C.muted },
+  sheetBack: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" },
+  sheetCard: { backgroundColor: "#121A24", borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth: 1, borderColor: C.edge, paddingHorizontal: 20, paddingTop: 10, gap: 14 },
+  grabber: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.18)", marginBottom: 4 },
   close: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: C.edge, backgroundColor: C.glass, alignItems: "center", justifyContent: "center" },
   breathStage: { height: 280, alignItems: "center", justifyContent: "center" },
   breathRing: { position: "absolute", width: 210, height: 210, borderRadius: 105, borderWidth: 1.5 },
