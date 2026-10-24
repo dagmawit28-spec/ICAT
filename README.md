@@ -10,7 +10,13 @@ A trauma-informed emotional regulation app. It's built on Barrett's theory of co
 
 This is a free test build that runs in **Expo Go**. Apple Health, the home screen widget, notifications and phone breaks need the paid Apple Developer account, so the app shows them as "locked" previews.
 
-## Run it on your phone (first time)
+## Easiest: home screen app (no installs)
+
+Live at **https://dagmawit28-spec.github.io/icat/**. Open it in Safari, tap Share, then **Add to Home Screen**. It gets the ICAT icon and opens full screen.
+
+To publish changes: run `python3 scripts/build-web.py`, then push the `dist/` folder to the `gh-pages` branch.
+
+## Run it in Expo Go (developer route)
 
 1. Install **Node.js** (LTS) from https://nodejs.org
 2. Get this code onto your computer: on GitHub hit **Code → Download ZIP** and unzip it, or run `git clone https://github.com/dagmawit28-spec/icat`

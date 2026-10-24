@@ -18,11 +18,19 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "ICAT",
+      "shortName": "ICAT",
+      "themeColor": "#090D12",
+      "backgroundColor": "#090D12",
+      "output": "single"
     },
     "backgroundColor": "#090D12",
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/icat"
+    }
   }
 }
